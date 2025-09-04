@@ -1,0 +1,6 @@
+[submodule "orient"]
+	path = orient
+	url = https://github.com/skyfty/orient.git
+[submodule "rmf"]
+	path = rmf
+	url = https://github.com/skyfty/rmf.git
