@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(demos_maps)
+project(demo_maps)
 
 find_package(ament_cmake REQUIRED)
 
