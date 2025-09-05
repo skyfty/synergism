@@ -18,25 +18,25 @@ from launch_ros.actions import PushRosNamespace
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, EnvironmentVariable
 from launch.substitutions import TextSubstitution
 
+from launch.launch_description_sources import XMLLaunchDescriptionSource
+
 # 定义函数名称为：generate_launch_description
 def generate_launch_description():
-    bringup_dir = get_package_share_directory('orient_bringup')
     orient_fleet_dir = get_package_share_directory('orient_fleet')
     description_dir = get_package_share_directory('orient_description')
 
-    description_name = LaunchConfiguration('description', default=os.getenv('ORIENT_DESCRIPTION', 'kf2404'))
     use_sim_time = LaunchConfiguration('use_sim_time', default='True')
     use_namespace = LaunchConfiguration('use_namespace')
 
     namespace = LaunchConfiguration('namespace', default='')
     log_level = LaunchConfiguration('log_level')
-    nav_graph_file = LaunchConfiguration('nav_graph_file')
+    nav_graph_map = LaunchConfiguration('nav_graph_map', default="office")
     
     nav_graph_file = PathJoinSubstitution([
         PathJoinSubstitution([
             get_package_share_directory('demos_maps'),
             'maps',
-            LaunchConfiguration('nav_graph_map', default="office"),
+            nav_graph_map,
         ]),
         TextSubstitution(text='nav_graphs'),
         TextSubstitution(text='0.yaml')
@@ -61,15 +61,6 @@ def generate_launch_description():
         description='Full path to nav_graph yaml file')
     ld.add_action(declare_nav_graph_map_cmd)
     
-    agent_config_file_cmd = DeclareLaunchArgument(
-        'agent_config_file',
-        default_value=ReplacePath(
-            name=description_name,
-            path=get_package_share_directory('orient_description'),
-            source_file=os.path.join('params','agent.yaml')),
-        description='The agent configuration file')
-    ld.add_action(agent_config_file_cmd)
-
     declare_log_level_cmd = DeclareLaunchArgument(
         'log_level', default_value='info',
         description='log level')
@@ -145,6 +136,17 @@ def generate_launch_description():
     ])
     ld.add_action(orient_fleet_node)
     
+    rmf_visualization = IncludeLaunchDescription(
+        XMLLaunchDescriptionSource(os.path.join(get_package_share_directory('rmf_visualization'),'launch','visualization.launch.xml')),
+        launch_arguments={
+            'namespace': namespace,
+            'log_level': log_level,
+            'use_sim_time': use_sim_time,
+            'map_name': nav_graph_map,
+            'rviz_config_file': os.path.join(get_package_share_directory('demo_bringup'),'rviz','demo.rviz'),
+        }.items(),
+    )
+    ld.add_action(rmf_visualization)
 
     agent_params = ParameterFile(
         RewrittenYaml(
@@ -165,6 +167,7 @@ def generate_launch_description():
             output='both',
         )   
     ld.add_action(fleet_mqtt_bridge)
+    
 
     kf2404_fleet = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([orient_fleet_dir,'/launch','/fleet.launch.py']),
@@ -177,7 +180,6 @@ def generate_launch_description():
         }.items(),
     )
     ld.add_action(kf2404_fleet)
-    
     
     
     
