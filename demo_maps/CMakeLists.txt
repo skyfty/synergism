@@ -29,7 +29,7 @@ foreach(path ${traffic_editor_paths})
   # Generate Gz world and download Models
   ##############################################################################
 
-  message("BUILDING WORLDFILE WITH COMMAND: ros2 run rmf_building_map_tools building_map_generator gazebo ${map_path} ${output_world_path} ${output_model_dir}")
+  message("BUILDING WORLDFILE WITH COMMAND: ros2 run rmf_building_map_tools building_map_generator ignition ${map_path} ${output_world_path} ${output_model_dir}")
   if (NO_DOWNLOAD_MODELS)
     add_custom_command(
       DEPENDS ${map_path}

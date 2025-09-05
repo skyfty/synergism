@@ -17,8 +17,9 @@ from launch_ros.descriptions import ComposableNode, ParameterFile
 from launch_ros.actions import PushRosNamespace
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, EnvironmentVariable
 from launch.substitutions import TextSubstitution
+from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
+from launch_yaml.launch_description_sources import YAMLLaunchDescriptionSource
 
-from launch.launch_description_sources import XMLLaunchDescriptionSource
 
 # 定义函数名称为：generate_launch_description
 def generate_launch_description():
@@ -30,13 +31,25 @@ def generate_launch_description():
 
     namespace = LaunchConfiguration('namespace', default='')
     log_level = LaunchConfiguration('log_level')
-    nav_graph_map = LaunchConfiguration('nav_graph_map', default="office")
+    map_name = LaunchConfiguration('map')
+    
+       
+    building_file = PathJoinSubstitution([
+        PathJoinSubstitution([
+            get_package_share_directory('demo_maps'),
+            map_name,
+            [map_name, TextSubstitution(text='.building.yaml')]
+        ]),
+        TextSubstitution(text='nav_graphs'),
+        TextSubstitution(text='0.yaml')
+    ])
+
     
     nav_graph_file = PathJoinSubstitution([
         PathJoinSubstitution([
-            get_package_share_directory('demos_maps'),
+            get_package_share_directory('demo_maps'),
             'maps',
-            nav_graph_map,
+            map_name,
         ]),
         TextSubstitution(text='nav_graphs'),
         TextSubstitution(text='0.yaml')
@@ -56,11 +69,11 @@ def generate_launch_description():
         description='Top-level namespace')
     ld.add_action(declare_namespace_cmd)
 
-    declare_nav_graph_map_cmd = DeclareLaunchArgument(
-        'nav_graph_map', default_value='',
+    declare_map_name_cmd = DeclareLaunchArgument(
+        'map_name', default_value='office',
         description='Full path to nav_graph yaml file')
-    ld.add_action(declare_nav_graph_map_cmd)
-    
+    ld.add_action(declare_map_name_cmd)
+
     declare_log_level_cmd = DeclareLaunchArgument(
         'log_level', default_value='info',
         description='log level')
@@ -133,25 +146,41 @@ def generate_launch_description():
             namespace=namespace,
             output='both',
         ),
+        Node(
+            package='rmf_building_map_tools',
+            executable='building_map_server',
+            arguments=['--config_file', building_file,'--ros-args', '--log-level', log_level],
+            parameters=[{
+                'use_sim_time': use_sim_time,
+            }],
+            namespace=namespace,
+            output='both',
+        ),
     ])
     ld.add_action(orient_fleet_node)
     
+
+    
     rmf_visualization = IncludeLaunchDescription(
-        XMLLaunchDescriptionSource(os.path.join(get_package_share_directory('rmf_visualization'),'launch','visualization.launch.xml')),
+        XMLLaunchDescriptionSource(os.path.join(get_package_share_directory('rmf_visualization'),'visualization.launch.xml')),
         launch_arguments={
             'namespace': namespace,
             'log_level': log_level,
             'use_sim_time': use_sim_time,
-            'map_name': nav_graph_map,
+            'map_name': map_name,
             'rviz_config_file': os.path.join(get_package_share_directory('demo_bringup'),'rviz','demo.rviz'),
         }.items(),
     )
     ld.add_action(rmf_visualization)
 
+    param_substitutions = {
+        'use_sim_time': use_sim_time}
+
     agent_params = ParameterFile(
         RewrittenYaml(
             source_file=os.path.join(get_package_share_directory('orient_bringup'),'params','agent.yaml'),
             root_key=namespace,
+            param_rewrites=param_substitutions,
             convert_types=True),
         allow_substs=True)
 
@@ -175,7 +204,7 @@ def generate_launch_description():
             'namespace': namespace,
             'log_level': log_level,
             'use_sim_time': use_sim_time,
-            'config_file': ReplacePath(name="kf2404",path=description_dir,source_file=os.path.join('params','fleet.yaml')),
+            'config_file': ReplacePath(name="fishbot",path=description_dir,source_file=os.path.join('params','fleet.yaml')),
             'nav_graph_file': nav_graph_file,
         }.items(),
     )

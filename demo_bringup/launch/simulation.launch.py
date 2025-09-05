@@ -21,10 +21,7 @@ from launch.substitutions import TextSubstitution
 from orient_common.launch import ReplacePath,JoinPath
 
 def generate_launch_description():
-    # Get the launch directory
-    pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
-    rmf_demos_assets = get_package_share_directory('rmf_demos_assets')
-    
+    # Get the launch directory    
     map_name = LaunchConfiguration('map_name', default="office")
 
     ld = LaunchDescription()
@@ -50,7 +47,7 @@ def generate_launch_description():
     ld.add_action(declare_world_cmd)
     
     world_dir = PathJoinSubstitution([
-        get_package_share_directory('demos_maps'),
+        get_package_share_directory('demo_maps'),
         'maps',
         map_name,
     ])
@@ -61,9 +58,10 @@ def generate_launch_description():
         [LaunchConfiguration('map_name'), TextSubstitution(text='.world')]
     ])
     ign_resource_path = [
+        TextSubstitution(text=get_package_share_directory('orient_description')),
         PathJoinSubstitution([world_dir,'models']),
-        PathJoinSubstitution([rmf_demos_assets, 'models']),
-        PathJoinSubstitution([pkg_gazebo_ros, 'models']),
+        PathJoinSubstitution([get_package_share_directory('rmf_demos_assets'), 'models']),
+        PathJoinSubstitution([get_package_share_directory('gazebo_ros'), 'models']),
         PathJoinSubstitution([EnvironmentVariable('HOME', default_value=''), '.gazebo/models']),
     ]
     ign_resource_path_env = AppendEnvironmentVariable(
@@ -72,7 +70,6 @@ def generate_launch_description():
     )
     ld.add_action(ign_resource_path_env)
     
-
     ign_plugin_path = [
         PathJoinSubstitution([get_package_prefix('rmf_robot_sim_gz_plugins'), 'lib/rmf_robot_sim_gz_plugins']),
         PathJoinSubstitution([get_package_prefix('rmf_building_sim_gz_plugins'), 'lib/rmf_building_sim_gz_plugins']),
