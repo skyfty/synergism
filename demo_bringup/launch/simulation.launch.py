@@ -85,9 +85,9 @@ def generate_launch_description():
     ld.add_action(ign_gui_plugin_path_env)
     
     open_ign = IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('ros_gz_sim'), 'launch'), '/gz_sim.launch.py']),
+            PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')]),
             launch_arguments=[
-                ('gz_args', [world_path, ' -v 4 -r'])
+                ('gz_args', [' -r ', world_path])
             ],
     )
     ld.add_action(open_ign)
@@ -97,16 +97,13 @@ def generate_launch_description():
         executable='parameter_bridge',
   
         arguments=[ 
-            '/world/world_model/model/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
+            '/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
+            '/scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
         ],
         parameters=[
             {
                 'use_sim_time': True,
-                'qos_overrides./model/subscriber.reliability': 'reliable',
             }
-        ],
-        remappings=[ 
-            ('/world/world_model/model/joint_state', '/joint_states'),
         ],
         output='screen'
     )
