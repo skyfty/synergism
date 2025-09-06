@@ -87,7 +87,7 @@ def generate_launch_description():
     open_ign = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')]),
             launch_arguments=[
-                ('gz_args', [' -r ', world_path])
+                ('gz_args', [' -r ', world_path]),
             ],
     )
     ld.add_action(open_ign)
@@ -97,13 +97,24 @@ def generate_launch_description():
         executable='parameter_bridge',
   
         arguments=[ 
-            '/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
-            '/scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
+            'clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+            'scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
+            'scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
+            'imu/data@sensor_msgs/msg/Imu@gz.msgs.IMU',
+            'camera@sensor_msgs/msg/Image@gz.msgs.Image',
+            'camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
+            'rgbd_camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
+            'rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
+            'rgbd_camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image',
+            'rgbd_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked'
         ],
         parameters=[
             {
                 'use_sim_time': True,
             }
+        ],
+        remappings=[ 
+            ('/world/world_model/model/joint_state', '/joint_states'),
         ],
         output='screen'
     )
