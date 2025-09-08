@@ -23,7 +23,7 @@ from orient_common.launch import ReplacePath,JoinPath
 def generate_launch_description():
     # Get the launch directory    
     map_name = LaunchConfiguration('map_name', default="office")
-
+    orient_description_share_dir = get_package_share_directory('orient_description')
     ld = LaunchDescription()
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -57,8 +57,11 @@ def generate_launch_description():
         TextSubstitution(text=''),
         [LaunchConfiguration('map_name'), TextSubstitution(text='.world')]
     ])
+    
+    orient_description_share_parent_dir = Path(orient_description_share_dir).parent
     ign_resource_path = [
-        TextSubstitution(text=get_package_share_directory('orient_description')),
+        TextSubstitution(text=orient_description_share_dir), # this gets the workspace src directory,
+        TextSubstitution(text=str(orient_description_share_parent_dir)), # this gets the workspace src directory,
         PathJoinSubstitution([world_dir,'models']),
         PathJoinSubstitution([get_package_share_directory('rmf_demos_assets'), 'models']),
         PathJoinSubstitution([get_package_share_directory('gazebo_ros'), 'models']),
