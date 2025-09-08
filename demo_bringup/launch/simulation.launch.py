@@ -4,6 +4,7 @@
 import os
 from pathlib import Path
 
+import yaml
 from ament_index_python.packages import get_package_share_directory,get_package_prefix
 
 from launch import LaunchDescription
@@ -94,6 +95,7 @@ def generate_launch_description():
             ],
     )
     ld.add_action(open_ign)
+    
     
     bridge = Node(
         package='ros_gz_bridge',
