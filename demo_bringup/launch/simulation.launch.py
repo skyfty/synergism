@@ -56,25 +56,19 @@ def spawn_robot_at_vertex_idx(level, vertex_idx):
 
 def create_ros_gz_bridge(robot_name):
     bridge = Node(
-            package='ros_gz_bridge',
-            executable='parameter_bridge',
-            arguments=[ 
-                'clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
-                'scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
-                'scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
-                'imu/data@sensor_msgs/msg/Imu@gz.msgs.IMU',
-            ],
-            parameters=[
-                {
-                    'use_sim_time': True,
-                }
-            ],
-            namespace=robot_name,
-            remappings=[ 
-                ('/world/world_model/model/joint_state', '/joint_states'),
-            ],
-            output='screen'
-        )
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=[
+            'scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
+            'scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
+            'imu/data@sensor_msgs/msg/Imu@gz.msgs.IMU',
+        ],
+        namespace=robot_name,
+        remappings=[ 
+            ('/world/world_model/model/joint_state', '/joint_states'),
+        ],
+        output='screen'
+    )
     return bridge
                 
 def spawn_model(context, *args, **kwargs):
@@ -113,14 +107,18 @@ def generate_launch_description():
         'use_namespace',
         default_value='false',
         description='Whether to apply a namespace to the navigation stack')
-
     ld.add_action(declare_use_namespace_cmd)
+    
+    decllare_use_sim_time_cmd = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true')
+    ld.add_action(decllare_use_sim_time_cmd)
 
     declare_world_cmd = DeclareLaunchArgument(
         'map_name',
         default_value="office",
         description='Full path to world model file to load')
-
     ld.add_action(declare_world_cmd)
     
     world_dir = PathJoinSubstitution([
@@ -183,15 +181,21 @@ def generate_launch_description():
     open_ign = IncludeLaunchDescription(
             PythonLaunchDescriptionSource([os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')]),
             launch_arguments=[
-                ('gz_args', [' -r ', world_path]),
+                ('gz_args', [' -r -v 1 ', world_path]),
             ],
     )
     ld.add_action(open_ign)
-
+    
+    bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'],
+        output='screen'
+    )
+    ld.add_action(bridge)
 
     ld.add_action(declare_world_cmd)
     ld.add_action(OpaqueFunction(function=spawn_model))
-
-
+    
   
     return ld
