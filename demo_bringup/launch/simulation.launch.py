@@ -3,6 +3,7 @@
 
 import os
 from pathlib import Path
+import math
 
 import yaml
 from ament_index_python.packages import get_package_share_directory,get_package_prefix
@@ -18,13 +19,90 @@ from launch.substitutions import Command, LaunchConfiguration
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable,AppendEnvironmentVariable
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, EnvironmentVariable
 from launch.substitutions import TextSubstitution
+from launch.actions import ExecuteProcess, DeclareLaunchArgument, OpaqueFunction
 
 from orient_common.launch import ReplacePath,JoinPath
+from building_map.generator import Building, indent_etree, ElementToString
+
+def parse_editor_yaml(input_filename):
+    if not os.path.isfile(input_filename):
+        raise FileNotFoundError(f'input file {input_filename} not found')
+
+    with open(input_filename, 'r') as f:
+        y = yaml.load(f, Loader=yaml.CLoader)
+        return Building(y)
+    
+def spawn_robot_at_vertex_idx(level, vertex_idx):
+    vertex = level.transformed_vertices[vertex_idx]
+    robot_name = vertex.params['spawn_robot_name'].value
+    robot_type = vertex.params['spawn_robot_type'].value
+
+    yaw = 0
+    # find the first vertex connected by a lane to this vertex
+    for lane in level.lanes:
+        if vertex_idx == lane.start_idx or vertex_idx == lane.end_idx:
+            yaw = level.edge_heading(lane)
+            if lane.orientation() == 'backward':
+                yaw += math.pi
+            break
+    robot_topic = robot_name + '/robot_description'
+    robot_x = vertex.x - level.transform.x
+    robot_y = vertex.y - level.transform.y
+    gz_spawn_entity = Node( package='ros_gz_sim', executable='create', output='screen',
+        parameters=[{
+            'use_sim_time': True,
+        }],
+        arguments=['-topic', robot_topic, '-x', str(robot_x), '-y', str(robot_y), '-z', '0.0', '-R', '0.0', '-P', '0.0', '-Y', str(yaw), '-name', robot_name],
+    )
+    return gz_spawn_entity;
+
+def create_ros_gz_bridge(robot_name):
+    bridge = Node(
+            package='ros_gz_bridge',
+            executable='parameter_bridge',
+            arguments=[ 
+                'clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
+                'scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
+                'scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
+                'imu/data@sensor_msgs/msg/Imu@gz.msgs.IMU',
+            ],
+            parameters=[
+                {
+                    'use_sim_time': True,
+                }
+            ],
+            namespace=robot_name,
+            remappings=[ 
+                ('/world/world_model/model/joint_state', '/joint_states'),
+            ],
+            output='screen'
+        )
+    return bridge
+                
+def spawn_model(context, *args, **kwargs):
+    building_map_path = LaunchConfiguration('building_map_path').perform(context)
+    print(f'Using building map file: {building_map_path}')
+    if not os.path.isfile(building_map_path):
+        raise FileNotFoundError(f'building map file {building_map_path} not found')
+    
+    actions = []
+    building = parse_editor_yaml(building_map_path)
+    for level_name, level in building.levels.items():
+        for vertex_idx, vertex in enumerate(level.vertices):
+            if 'spawn_robot_type' in vertex.params:
+                robot_name = vertex.params['spawn_robot_name'].value
+                gz_spawn_entity = spawn_robot_at_vertex_idx(level, vertex_idx)
+                actions.append(gz_spawn_entity)
+                actions.append(create_ros_gz_bridge(robot_name))
+    return actions
+
 
 def generate_launch_description():
     # Get the launch directory    
     map_name = LaunchConfiguration('map_name', default="office")
     orient_description_share_dir = get_package_share_directory('orient_description')
+    demo_maps_share_dir = get_package_share_directory('demo_maps')
+
     ld = LaunchDescription()
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -48,7 +126,7 @@ def generate_launch_description():
     ld.add_action(declare_world_cmd)
     
     world_dir = PathJoinSubstitution([
-        get_package_share_directory('demo_maps'),
+        demo_maps_share_dir,
         'maps',
         map_name,
     ])
@@ -56,9 +134,25 @@ def generate_launch_description():
     world_path = PathJoinSubstitution([
         world_dir,
         TextSubstitution(text=''),
-        [LaunchConfiguration('map_name'), TextSubstitution(text='.world')]
+        [map_name, TextSubstitution(text='.world')]
+    ])
+
+    building_map_path = PathJoinSubstitution([
+        PathJoinSubstitution([
+            demo_maps_share_dir,
+            map_name,
+        ]),
+        TextSubstitution(text=''),
+        [map_name, TextSubstitution(text='.building.yaml')]
     ])
     
+    declare_building_map_path_cmd = DeclareLaunchArgument(
+        'building_map_path',
+        default_value=building_map_path,
+        description='Full path to building model file to load')
+    ld.add_action(declare_building_map_path_cmd)
+
+
     orient_description_share_parent_dir = Path(orient_description_share_dir).parent
     ign_resource_path = [
         TextSubstitution(text=orient_description_share_dir), # this gets the workspace src directory,
@@ -95,34 +189,37 @@ def generate_launch_description():
             ],
     )
     ld.add_action(open_ign)
+
+
+    ld.add_action(declare_world_cmd)
+    ld.add_action(OpaqueFunction(function=spawn_model))
+
+
+
+    # gz_spawn_entity = Node(
+    #     package='ros_gz_sim',
+    #     executable='create',
+    #     namespace=namespace,
+    #     output='screen',
+    #     remappings=remappings,
+    #     arguments=['-topic', 'robot_description', '-name', namespace, '-allow_renaming', 'true'],
+    # )
+    # ld.add_action(gz_spawn_entity)
     
-    
-    bridge = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
+        
+    # gz_spawn_entity = Node(
+    #     package='ros_gz_sim',
+    #     executable='create',
+    #     output='screen',
+    #     parameters=[{
+    #         'use_sim_time': True,
+    #     }],
+    #     arguments=['-string', robot_desc,
+    #                '-x', '-0.9780', '-y', '-0.7614', '-z', '0.0',
+    #                '-R', '0.0', '-P', '0.0', '-Y', '1.5825',
+    #                '-name', 'panda'],
+    # )
+
   
-        arguments=[ 
-            'clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock',
-            'scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan',
-            'scan/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked',
-            'imu/data@sensor_msgs/msg/Imu@gz.msgs.IMU',
-            'camera@sensor_msgs/msg/Image@gz.msgs.Image',
-            'camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
-            'rgbd_camera/image@sensor_msgs/msg/Image@gz.msgs.Image',
-            'rgbd_camera/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo',
-            'rgbd_camera/depth_image@sensor_msgs/msg/Image@gz.msgs.Image',
-            'rgbd_camera/points@sensor_msgs/msg/PointCloud2@gz.msgs.PointCloudPacked'
-        ],
-        parameters=[
-            {
-                'use_sim_time': True,
-            }
-        ],
-        remappings=[ 
-            ('/world/world_model/model/joint_state', '/joint_states'),
-        ],
-        output='screen'
-    )
-    ld.add_action(bridge)
 
     return ld
