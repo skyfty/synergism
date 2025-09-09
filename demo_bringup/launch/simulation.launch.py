@@ -195,31 +195,5 @@ def generate_launch_description():
     ld.add_action(OpaqueFunction(function=spawn_model))
 
 
-
-    # gz_spawn_entity = Node(
-    #     package='ros_gz_sim',
-    #     executable='create',
-    #     namespace=namespace,
-    #     output='screen',
-    #     remappings=remappings,
-    #     arguments=['-topic', 'robot_description', '-name', namespace, '-allow_renaming', 'true'],
-    # )
-    # ld.add_action(gz_spawn_entity)
-    
-        
-    # gz_spawn_entity = Node(
-    #     package='ros_gz_sim',
-    #     executable='create',
-    #     output='screen',
-    #     parameters=[{
-    #         'use_sim_time': True,
-    #     }],
-    #     arguments=['-string', robot_desc,
-    #                '-x', '-0.9780', '-y', '-0.7614', '-z', '0.0',
-    #                '-R', '0.0', '-P', '0.0', '-Y', '1.5825',
-    #                '-name', 'panda'],
-    # )
-
   
-
     return ld
