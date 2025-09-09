@@ -9,20 +9,18 @@ import yaml
 from ament_index_python.packages import get_package_share_directory,get_package_prefix
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from orient_common.launch import ReplacePath
-from launch.substitutions import Command, LaunchConfiguration
+from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, SetEnvironmentVariable,AppendEnvironmentVariable
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, EnvironmentVariable
 from launch.substitutions import TextSubstitution
-from launch.actions import ExecuteProcess, DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
 
 from orient_common.launch import EnvPathJoinSubstitution
-from building_map.generator import Building, indent_etree, ElementToString
+from building_map.generator import Building
 
 def parse_editor_yaml(input_filename):
     if not os.path.isfile(input_filename):
