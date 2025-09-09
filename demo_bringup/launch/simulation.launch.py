@@ -21,7 +21,7 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Envi
 from launch.substitutions import TextSubstitution
 from launch.actions import ExecuteProcess, DeclareLaunchArgument, OpaqueFunction
 
-from orient_common.launch import ReplacePath,JoinPath
+from orient_common.launch import EnvPathJoinSubstitution
 from building_map.generator import Building, indent_etree, ElementToString
 
 def parse_editor_yaml(input_filename):
@@ -164,7 +164,7 @@ def generate_launch_description():
     ]
     ign_resource_path_env = AppendEnvironmentVariable(
         name='IGN_GAZEBO_RESOURCE_PATH',
-        value= JoinPath(ign_resource_path)
+        value= EnvPathJoinSubstitution(ign_resource_path)
     )
     ld.add_action(ign_resource_path_env)
     
@@ -173,12 +173,12 @@ def generate_launch_description():
         PathJoinSubstitution([get_package_prefix('rmf_building_sim_gz_plugins'), 'lib/rmf_building_sim_gz_plugins']),
     ]
     ign_system_plugin_path_env = AppendEnvironmentVariable(
-        'IGN_GAZEBO_SYSTEM_PLUGIN_PATH', JoinPath(ign_plugin_path)
+        'IGN_GAZEBO_SYSTEM_PLUGIN_PATH', EnvPathJoinSubstitution(ign_plugin_path)
     )
     ld.add_action(ign_system_plugin_path_env)
 
     ign_gui_plugin_path_env = AppendEnvironmentVariable(
-        'IGN_GUI_PLUGIN_PATH', JoinPath(ign_plugin_path)
+        'IGN_GUI_PLUGIN_PATH', EnvPathJoinSubstitution(ign_plugin_path)
     )
     ld.add_action(ign_gui_plugin_path_env)
     
