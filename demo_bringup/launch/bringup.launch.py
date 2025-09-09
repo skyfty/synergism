@@ -198,7 +198,7 @@ def generate_launch_description():
     ld.add_action(fleet_mqtt_bridge)
     
 
-    kf2404_fleet = IncludeLaunchDescription(
+    fishbot_fleet = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([orient_fleet_dir,'/launch','/fleet.launch.py']),
         launch_arguments={
             'namespace': namespace,
@@ -208,7 +208,7 @@ def generate_launch_description():
             'nav_graph_file': nav_graph_file,
         }.items(),
     )
-    ld.add_action(kf2404_fleet)
+    ld.add_action(fishbot_fleet)
     
     
     
